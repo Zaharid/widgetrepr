@@ -7,7 +7,7 @@ Created on Wed May 14 23:43:46 2014
 
 from IPython.utils import traitlets
 
-class ExecutableTrait(traitlets.Unicode):
+class ExecutableTrait(traitlets.CUnicode):
     allow_none = True
     default_value = None
     
@@ -15,8 +15,7 @@ class ExecutableTrait(traitlets.Unicode):
         self.locals = local_ns
         self.globals = global_ns
         super(ExecutableTrait,self).__init__(default_value, **metadata)
-        
-    
+
     def eval_value(self, value):
         """Print the local variables in the caller's frame."""
         if value == "":

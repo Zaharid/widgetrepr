@@ -23,14 +23,25 @@ class EvaluableWidget(widgets.TextWidget):
                             help="Evaluable Python ", sync=True)
 
 def get_widget(name, trait):
-    try:
+    if 'widget' in trait.metadata:
         widget = trait.metadata['widget']
-    except KeyError:
-        return widget_mapping[type(trait)](description = name, 
+        if inspect.isclass(widget):
+            widget = widget(description = name, value = trait.default_value)
+    elif 'choices' in trait.metadata:
+        choices = trait.metadata['choices']
+        widget = widgets.DropdownWidget(values = choices,description = name, 
+            value = trait.default_value )
+    elif 'choose_from' in trait.metadata:
+        choices = trait.metadata['choose_from']()
+        widget = widgets.DropdownWidget(values = choices,description = name, 
+            value = trait.default_value )
+    else:
+        widget = widget_mapping[type(trait)](description = name, 
             value = trait.default_value)
-    if inspect.isclass(widget):
-        widget = widget(description = name, value = trait.default_value)
     return widget
+
+    
+    
 
         
 
@@ -39,7 +50,6 @@ widget_mapping = defaultdict(lambda: EvaluableWidget, {
      Bool: widgets.CheckboxWidget,
      Int: widgets.IntTextWidget,
      Float: widgets.FloatTextWidget,
-
 })
 
 
