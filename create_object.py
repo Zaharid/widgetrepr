@@ -4,15 +4,24 @@ Created on Fri May 16 18:57:47 2014
 
 @author: zah
 """
-from IPython.display import display
-from IPython.html import widgets
-from IPython.core.interactiveshell import InteractiveShell
-
+#Delay errors so that this module can be imported without IPython.
+_e = False
+try:
+    from IPython.display import display
+    from IPython.html import widgets
+    from IPython.core.interactiveshell import InteractiveShell
+except ImportError as e:
+    _e = Exception("You need the module %s to produce widgets." % e.name)
+else:
+    shell = InteractiveShell.instance()
+    
 from labcore.widgets.widgets import get_widget
 
-shell = InteractiveShell.instance()
+
 
 def class_widget(cls):
+    if _e:
+        raise e
     cont = widgets.ContainerWidget()
     #Need sorted and dict
     children = []
@@ -32,11 +41,12 @@ class CreateManager(object):
         self.varname = varname
         self.cls = cls
     
-    def class_widget(self):
+    def make_class_widget(self):
         if hasattr(self.cls, 'class_widget'):
             self.cont,self.wdict = self.cls.class_widget()
         else:
             self.cont,self.wdict = class_widget(self.cls)
+        
     
     def new_object(self, button):
         values = {}
@@ -49,42 +59,30 @@ class CreateManager(object):
             values[name] = value
         obj = self.cls(**values)
         shell.push({self.varname:obj})
-    
+        return obj
+        
+    @property
     def create_description(self):
         return "Create %s" % self.cls.__name__
     
     def create_button(self):
-        button = widgets.ButtonWidget(description = self.create_description)       
+        button = widgets.ButtonWidget(description = self.create_description)
+        button.on_click(self.new_object)
         return button        
         
     def create_object(self):
-        cont, __ = self.class_widget()
+        self.make_class_widget()
         button = self.create_button()
-        cont.children = cont.children + (button,)
-        display(cont)
+        self.cont.children = self.cont.children + (button,)
+        display(self.cont)
     
     
 
 def create_object(varname, cls):
-    if hasattr(cls, 'class_widget'):
-        (cont,wdict) = cls.class_widget()
-    else:
-        cont,wdict = class_widget(cls)
-    description = "Create %s" % cls.__name__
-    def _new_obj(b):
-        values = {}
-        for name, w in wdict.items():
-            trait = w.traits()['value']
-            try:
-                value  = trait.eval_value(w.value)
-            except AttributeError:
-                value = w.value
-            values[name] = value
-        obj = cls(**values)
-        shell.push({varname:obj})
-        
-    button = widgets.ButtonWidget(description = description)
-    button.on_click(_new_obj)
-    cont.children = cont.children + (button,)
-    display(cont)
+    if _e:
+        raise _e
+    if hasattr(cls, "CreateManager"):
+        cm = cls.CreateManager(varname, cls)
+    cm = CreateManager(varname,cls)
+    cm.create_object()
     
