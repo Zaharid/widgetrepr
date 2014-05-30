@@ -25,6 +25,46 @@ def class_widget(cls):
     cont.children = children
     return (cont, wdict)
 
+
+class CreateManager(object):
+    
+    def __init__(self, varname, cls):
+        self.varname = varname
+        self.cls = cls
+    
+    def class_widget(self):
+        if hasattr(self.cls, 'class_widget'):
+            self.cont,self.wdict = self.cls.class_widget()
+        else:
+            self.cont,self.wdict = class_widget(self.cls)
+    
+    def new_object(self, button):
+        values = {}
+        for name, w in self.wdict.items():
+            trait = w.traits()['value']
+            try:
+                value  = trait.eval_value(w.value)
+            except AttributeError:
+                value = w.value
+            values[name] = value
+        obj = self.cls(**values)
+        shell.push({self.varname:obj})
+    
+    def create_description(self):
+        return "Create %s" % self.cls.__name__
+    
+    def create_button(self):
+        button = widgets.ButtonWidget(description = self.create_description)       
+        return button        
+        
+    def create_object(self):
+        cont, __ = self.class_widget()
+        button = self.create_button()
+        cont.children = cont.children + (button,)
+        display(cont)
+    
+    
+
 def create_object(varname, cls):
     if hasattr(cls, 'class_widget'):
         (cont,wdict) = cls.class_widget()
