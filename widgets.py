@@ -5,11 +5,12 @@ Created on Mon Apr  7 22:24:47 2014
 @author: zah
 """
 from collections import defaultdict
+from collections import Mapping
 import inspect
 
 from IPython.html import widgets
 from IPython.utils.traitlets import (
-    List,Unicode,Bool,Int,Float,Instance,Any,Type,
+    List,Unicode,Bool,Int,Float,Instance,Any,Type, Enum
 )
 from IPython.utils import traitlets
 from IPython.core.interactiveshell import InteractiveShell
@@ -29,16 +30,25 @@ def get_widget(name, trait):
         if inspect.isclass(widget):
             widget = widget(description = name, value = trait.default_value)
     elif 'choices' in trait._metadata:
-        choices = trait._metadata['choices']
+        choices = {str(item): item for item in trait._metadata['choices']}
         widget = widgets.DropdownWidget(values = choices,description = name, 
             value = trait.default_value )
     elif 'choose_from' in trait._metadata:
         choices = trait._metadata['choose_from']()
+        if trait.allow_none:
+            choices[""] = None
         widget = widgets.DropdownWidget(values = choices,description = name, 
             value = trait.default_value )
     else:
-        widget = widget_mapping[type(trait)](description = name, 
-            value = trait.default_value)
+        kw = dict(description = name, value = trait.default_value)
+        if hasattr(trait, 'values'):
+            values = trait.values
+            if not isinstance(values, Mapping):
+                values = {str(val): val for val in values}
+            if trait.allow_none:
+                values[""] = None
+            kw['values'] = values
+        widget = widget_mapping[type(trait)](**kw)
     return widget
 
 widget_mapping = defaultdict(lambda: EvaluableWidget, {
@@ -46,6 +56,7 @@ widget_mapping = defaultdict(lambda: EvaluableWidget, {
      Bool: widgets.CheckboxWidget,
      Int: widgets.IntTextWidget,
      Float: widgets.FloatTextWidget,
+     Enum: widgets.DropdownWidget
 })
 
 

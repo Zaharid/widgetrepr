@@ -18,7 +18,7 @@ class ExecutableTrait(traitlets.CUnicode):
 
     def eval_value(self, value):
         """Print the local variables in the caller's frame."""
-        if value == "":
+        if value == "" or value is None:
             return None            
         try:
             pyvalue = eval(value, self.globals, self.locals)

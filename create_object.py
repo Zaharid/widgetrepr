@@ -82,7 +82,9 @@ def create_object(varname, cls):
     if _e:
         raise _e
     if hasattr(cls, "CreateManager"):
+        print("has cm")
         cm = cls.CreateManager(varname, cls)
-    cm = CreateManager(varname,cls)
+    else:
+        cm = CreateManager(varname,cls)
     cm.create_object()
     
