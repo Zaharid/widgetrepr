@@ -4,6 +4,7 @@ Created on Fri May 16 18:57:47 2014
 
 @author: zah
 """
+from collections import OrderedDict
 #Delay errors so that this module can be imported without IPython.
 _e = False
 try:
@@ -25,8 +26,28 @@ def class_widget(cls):
     cont = widgets.ContainerWidget()
     #Need sorted and dict
     children = []
-    wdict = {}
-    for name,trait in cls.class_traits().items():
+    wdict = OrderedDict()
+    class_traits = cls.class_traits()
+    if hasattr(cls, '_widget_fields'):
+        items = [(field,class_traits[field]) for field in cls._widget_fields]
+    elif hasattr(cls, '_hidden_fields'):
+        items = [(k,v) for (k,v) in class_traits.items() 
+                if k not in cls._hidden_fields]
+    else:
+        items = class_traits.items()
+       
+    if hasattr(cls, "_member_names"):
+        def order(item):
+            name, trait = item
+            if 'order' in trait._metadata:
+                return trait._metadata['order']
+            try:
+                return cls._member_names.index(name)
+            except ValueError:
+                return float('inf')
+        items = sorted(items, key = order)
+    
+    for name,trait in items:
         w = get_widget(name, trait)
         if w is None: continue
         children += [w]
@@ -46,7 +67,8 @@ class CreateManager(object):
             self.cont,self.wdict = self.cls.class_widget()
         else:
             self.cont,self.wdict = class_widget(self.cls)
-        
+        if 'name' in self.wdict:
+            self.wdict['name'].value = self.varname
     
     def new_object(self, button):
         values = {}
@@ -82,7 +104,6 @@ def create_object(varname, cls):
     if _e:
         raise _e
     if hasattr(cls, "CreateManager"):
-        print("has cm")
         cm = cls.CreateManager(varname, cls)
     else:
         cm = CreateManager(varname,cls)

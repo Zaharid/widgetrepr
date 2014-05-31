@@ -25,29 +25,29 @@ class EvaluableWidget(widgets.TextWidget):
 
 def get_widget(name, trait):
     name = name.title().replace("_" ," " ).title()
+    kw = dict(description = name, value = trait.get_default_value())
+    if hasattr(trait, 'values'):
+        values = trait.values
+        if not isinstance(values, Mapping):
+            values = {str(val): val for val in values}
+        if trait.allow_none:
+            values[""] = None
+        kw['values'] = values
     if 'widget' in trait._metadata:
         widget = trait._metadata['widget']
         if inspect.isclass(widget):
-            widget = widget(description = name, value = trait.default_value)
+            widget = widget(**kw)
     elif 'choices' in trait._metadata:
         choices = {str(item): item for item in trait._metadata['choices']}
-        widget = widgets.DropdownWidget(values = choices,description = name, 
-            value = trait.default_value )
+        kw['values'] = choices
+        widget = widgets.DropdownWidget(**kw)
     elif 'choose_from' in trait._metadata:
         choices = trait._metadata['choose_from']()
         if trait.allow_none:
             choices[""] = None
-        widget = widgets.DropdownWidget(values = choices,description = name, 
-            value = trait.default_value )
+        kw['values'] = choices
+        widget = widgets.DropdownWidget(**kw)
     else:
-        kw = dict(description = name, value = trait.default_value)
-        if hasattr(trait, 'values'):
-            values = trait.values
-            if not isinstance(values, Mapping):
-                values = {str(val): val for val in values}
-            if trait.allow_none:
-                values[""] = None
-            kw['values'] = values
         widget = widget_mapping[type(trait)](**kw)
     return widget
 
