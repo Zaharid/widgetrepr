@@ -10,18 +10,14 @@ import inspect
 
 from IPython.html import widgets
 from IPython.utils.traitlets import (
-    List,Unicode,Bool,Int,Float,Instance,Any,Type, Enum
+    Unicode,Bool,Int,Float, Enum
 )
-from IPython.utils import traitlets
-from IPython.core.interactiveshell import InteractiveShell
 
 from labcore.widgets.traits import ExecutableTrait
 
-shell = InteractiveShell.instance()
 class EvaluableWidget(widgets.TextWidget):
     
-    value = ExecutableTrait(shell.user_ns, shell.user_global_ns,
-                            help="Evaluable Python ", sync=True)
+    value = ExecutableTrait(help="Evaluable Python ", sync=True)
 
 def get_widget(name, trait):
     name = name.title().replace("_" ," " ).title()

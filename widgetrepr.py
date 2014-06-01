@@ -4,8 +4,12 @@ Created on Fri May 16 18:57:47 2014
 
 @author: zah
 """
-from collections import OrderedDict
+import inspect
+from collections import OrderedDict, defaultdict, Mapping
 #Delay errors so that this module can be imported without IPython.
+from IPython.utils.traitlets import (
+    Unicode,Bool,Int,Float, Enum
+)
 _e = False
 try:
     from IPython.display import display
@@ -13,16 +17,24 @@ try:
     from IPython.core.interactiveshell import InteractiveShell
 except ImportError as e:
     _e = Exception("You need the module %s to produce widgets." % e.name)
-else:
-    shell = InteractiveShell.instance()
     
-from labcore.widgets.widgets import get_widget
+from labcore.widgets.widgets import EvaluableWidget
 
 
 class WidgetRepresentation(object):
     
     widget_fields = None
     hidden_fields = None
+    varname_map = None
+    
+    widget_mapping = defaultdict(lambda: EvaluableWidget, {
+        Unicode: widgets.TextWidget,
+        Bool: widgets.CheckboxWidget,
+        Int: widgets.IntTextWidget,
+        Float: widgets.FloatTextWidget,
+        Enum: widgets.DropdownWidget
+     })
+
     
     def __init__(self, cls, varname = None, default_values = None):
         self.varname = varname
@@ -32,6 +44,40 @@ class WidgetRepresentation(object):
         else:
             self.default_values = default_values
     
+    def get_widget(self, name, trait):
+        if name in self.default_values:
+            value = self.default_values[name]
+        elif name == self.varname_map:
+            value = self.varname
+        else:
+            value = trait.get_default_value()
+        description = name.title().replace("_" ," " ).title()
+        kw = dict(description = description, value = value)
+        if hasattr(trait, 'values'):
+            values = trait.values
+            if not isinstance(values, Mapping):
+                values = {str(val): val for val in values}
+            if trait.allow_none:
+                values[""] = None
+            kw['values'] = values
+        if 'widget' in trait._metadata:
+            widget = trait._metadata['widget']
+            if inspect.isclass(widget):
+                widget = widget(**kw)
+        elif 'choices' in trait._metadata:
+            choices = {str(item): item for item in trait._metadata['choices']}
+            kw['values'] = choices
+            widget = widgets.DropdownWidget(**kw)
+        elif 'choose_from' in trait._metadata:
+            choices = trait._metadata['choose_from']()
+            if trait.allow_none:
+                choices[""] = None
+            kw['values'] = choices
+            widget = widgets.DropdownWidget(**kw)
+        else:
+            widget = self.widget_mapping[type(trait)](**kw)
+        return widget        
+        
     def class_widget(self, default_values = None):
         if _e:
             raise e
@@ -63,10 +109,8 @@ class WidgetRepresentation(object):
             items = sorted(items, key = order)
         
         for name,trait in items:
-            w = get_widget(name, trait)
+            w = self.get_widget(name, trait)
             if w is None: continue
-            if name in default_values:
-                w.value = default_values[name]
             children += [w]
             wdict[name] = w
         cont.children = children
@@ -84,6 +128,7 @@ class WidgetRepresentation(object):
         return values
     
     def new_object(self, button):
+        shell = InteractiveShell.instance()
         values = self.read_form()
         obj = self.cls(**values)
         shell.push({self.varname:obj})
