@@ -20,7 +20,7 @@ from labcore.widgets.widgets import get_widget
 
 
 
-def class_widget(cls):
+def class_widget(cls, default_values):
     if _e:
         raise e
     cont = widgets.ContainerWidget()
@@ -50,6 +50,8 @@ def class_widget(cls):
     for name,trait in items:
         w = get_widget(name, trait)
         if w is None: continue
+        if name in default_values:
+            w.value = default_values[name]
         children += [w]
         wdict[name] = w
     cont.children = children
@@ -58,19 +60,24 @@ def class_widget(cls):
 
 class CreateManager(object):
     
-    def __init__(self, varname, cls):
+    def __init__(self, varname, cls, default_values = None):
         self.varname = varname
         self.cls = cls
+        if default_values is None:
+            self.default_values = {}
+        else:
+            self.default_values = default_values
     
     def make_class_widget(self):
         if hasattr(self.cls, 'class_widget'):
-            self.cont,self.wdict = self.cls.class_widget()
+            self.cont,self.wdict = self.cls.class_widget(self.default_values)
         else:
-            self.cont,self.wdict = class_widget(self.cls)
-        if 'name' in self.wdict:
+            self.cont,self.wdict = class_widget(self.cls, self.default_values)
+        #TODO: Do this right.
+        if 'name' in self.wdict and self.varname:
             self.wdict['name'].value = self.varname
     
-    def new_object(self, button):
+    def read_form(self):
         values = {}
         for name, w in self.wdict.items():
             trait = w.traits()['value']
@@ -79,6 +86,10 @@ class CreateManager(object):
             except AttributeError:
                 value = w.value
             values[name] = value
+        return values
+    
+    def new_object(self, button):
+        values = self.read_form()
         obj = self.cls(**values)
         shell.push({self.varname:obj})
         return obj
@@ -100,12 +111,12 @@ class CreateManager(object):
     
     
 
-def create_object(varname, cls):
+def create_object(varname, cls, default_values = None):
     if _e:
         raise _e
     if hasattr(cls, "CreateManager"):
-        cm = cls.CreateManager(varname, cls)
+        cm = cls.CreateManager(varname, cls, default_values)
     else:
-        cm = CreateManager(varname,cls)
+        cm = CreateManager(varname, cls, default_values)
     cm.create_object()
     
