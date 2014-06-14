@@ -8,7 +8,7 @@ import inspect
 from collections import OrderedDict, defaultdict, Mapping
 #Delay errors so that this module can be imported without IPython.
 from IPython.utils.traitlets import (
-    Unicode,Bool,Int,Float, Enum, List, HasTraits
+    Unicode,Bool,Int,Float, Enum, List, HasTraits, Instance
 )
 _e = False
 try:
@@ -41,9 +41,11 @@ class ListWidget(widgets.ContainerWidget):
             self.add_representation = WidgetRepresentation
             
         super(ListWidget, self).__init__(*args, **kwargs)
+        self._value_changed(self.value)
     
     def _value_changed(self, value):
-        title = widgets.LatexWidget(self.description)
+        print("tonto")
+        title = widgets.LatexWidget(value = self.description)
         children = [title]
         for elem in value:
             wcont = widgets.ContainerWidget(description = str(elem))
@@ -82,7 +84,7 @@ class WidgetRepresentation(object):
         Bool: widgets.CheckboxWidget,
         Int: widgets.IntTextWidget,
         Float: widgets.FloatTextWidget,
-        Enum: widgets.DropdownWidget
+        Enum: widgets.DropdownWidget,
      })
 
 
@@ -137,6 +139,11 @@ class WidgetRepresentation(object):
                 choices[""] = None
             kw['values'] = choices
             widget = widgets.DropdownWidget(**kw)
+        elif (isinstance(trait, List) and trait._trait):
+            if isinstance(trait._trait, Instance):
+                trait._trait._resolve_classes()
+            if issubclass(trait._trait.klass, HasTraits):
+                widget = ListWidget(trait._trait.klass, **kw)
         else:
             widget = self.widget_mapping[type(trait)](**kw)
         return widget
