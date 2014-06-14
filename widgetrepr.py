@@ -225,6 +225,8 @@ class WidgetRepresentation(object):
     def create_button(self):
         button = widgets.ButtonWidget(description = self.create_description())
         handler = lambda button: self.on_new_object()
+        def handler(button):
+            return self.on_new_object()
        
         button.on_click(handler)
         return button
