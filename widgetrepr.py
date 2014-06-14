@@ -44,7 +44,6 @@ class ListWidget(widgets.ContainerWidget):
         self._value_changed(self.value)
     
     def _value_changed(self, value):
-        print("tonto")
         title = widgets.LatexWidget(value = self.description)
         children = [title]
         for elem in value:
@@ -61,8 +60,11 @@ class ListWidget(widgets.ContainerWidget):
 
         def add_f(button):
             if self.add_representation:
+                def handler(obj):
+                    self.value = list(self.value) + [obj]
                 wr =  self.add_representation(self.klass, 
-                      container_widget = widgets.PopupWidget)
+                      container_widget = widgets.PopupWidget, 
+                      create_handler = handler)
             else:
                 raise NotImplementedError() 
             wr.create_object()
