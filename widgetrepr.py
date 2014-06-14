@@ -26,7 +26,9 @@ class EvaluableWidget(widgets.TextWidget):
     value = ExecutableTrait(help="Evaluable Python ", sync=True)
 
 class ListWidget(widgets.ContainerWidget):
-    value = List(help = 'value', sync = True)
+    description = Unicode(help="Description of the value this widget represents", sync=True)
+
+    value = List(help = 'value')
     add_representation = None
     
     def __init__(self, klass, *args, **kwargs):
@@ -41,10 +43,20 @@ class ListWidget(widgets.ContainerWidget):
             self.add_representation = WidgetRepresentation
             
         super(ListWidget, self).__init__(*args, **kwargs)
-        self._value_changed(self.value)
+        self._value_changed(None,self.value)
+        self.on_displayed(lambda cont: cont.add_class("listwidget"))
     
-    def _value_changed(self, value):
-        title = widgets.LatexWidget(value = self.description)
+    @staticmethod
+    def _set_style(wcont):
+        wcont.remove_class("vbox")
+        wcont.add_class("hbox")
+        wcont.set_css({'padding':'10px', 'background':'#FFFFEE',})
+        for child in wcont.children:
+            child.set_css({'margin':'10px'})
+    
+    
+    def _value_changed(self, __ ,value):
+        title = widgets.HTMLWidget(value ='<h5>%s</h5>' % self.description)
         children = [title]
         for elem in value:
             wcont = widgets.ContainerWidget(description = str(elem))
@@ -54,24 +66,55 @@ class ListWidget(widgets.ContainerWidget):
             delete_button = widgets.ButtonWidget(description = "Delete")
             wcont.children = [wtitle, edit_button, delete_button]
             
+            def edit_f(button):
+                if self.add_representation:
+                    wr =  self.add_representation(self.klass, 
+                          container_widget = widgets.PopupWidget, 
+                          )
+                else:
+                    raise NotImplementedError() 
+                def edit_callback(obj):
+                    wr.cont.close()
+                wr.edit_object(elem)
+                wr.edit_callback = edit_callback
+            
+            edit_button.on_click(edit_f)
+            
+            def delete_f(button):
+                l = list(self.value)
+                l.remove(elem)
+                self.value = l
+            
+            delete_button.on_click(delete_f)
+            
+            
             children.append(wcont)
             
-        add_button = widgets.ButtonWidget(description = "Add Command")
+            wcont.on_displayed(self._set_style)
+            
+        add_button = widgets.ButtonWidget(description = "Add %s" % 
+                    self.klass.__name__)
 
         def add_f(button):
             if self.add_representation:
-                def handler(obj):
-                    self.value = list(self.value) + [obj]
+                
                 wr =  self.add_representation(self.klass, 
                       container_widget = widgets.PopupWidget, 
-                      create_handler = handler)
+                      )
+                def handler(obj):
+                    self.value = list(self.value) + [obj]
+                    wr.cont.close()
+                wr.create_handler = handler
             else:
                 raise NotImplementedError() 
             wr.create_object()
+        
+            
              
         add_button.on_click(add_f)
         children.append(add_button)
         self.children = children
+        self._fire_children_displayed()
 
 
 class WidgetRepresentation(object):
@@ -93,7 +136,7 @@ class WidgetRepresentation(object):
     def __init__(self, cls, varname = None, default_values = None,
                  container_widget = None, widget_fields = None,
                  hidden_fields = None, varname_map = None,
-                 create_handler = None):
+                 create_handler = None, edit_callback = None):
         self.varname = varname
         self.cls = cls
         if default_values is None:
@@ -110,14 +153,9 @@ class WidgetRepresentation(object):
         if varname_map is not None:
             self.varname_map = varname_map
         self.create_handler = create_handler
+        self.edit_callback = edit_callback
 
-    def get_widget(self, name, trait):
-        if name in self.default_values:
-            value = self.default_values[name]
-        elif name == self.varname_map:
-            value = self.varname
-        else:
-            value = trait.get_default_value()
+    def get_widget(self, name, trait, value):
         description = name.title().replace("_" ," " ).title()
         kw = dict(description = description, value = value)
         if hasattr(trait, 'values'):
@@ -181,7 +219,13 @@ class WidgetRepresentation(object):
             items = sorted(items, key = order)
 
         for name,trait in items:
-            w = self.get_widget(name, trait)
+            if name in default_values:
+                value = default_values[name]
+            elif name == self.varname_map:
+                value = self.varname
+            else:
+                value = trait.get_default_value()
+            w = self.get_widget(name, trait, value)
             if w is None: continue
             children += [w]
             wdict[name] = w
@@ -222,7 +266,9 @@ class WidgetRepresentation(object):
         def _change_object(button):
             values = self.read_form()
             for key, val in values.items():
-                obj[key] = val
+                setattr(obj, key, val)
+            if self.edit_callback:
+                self.edit_callback(obj)
         return _change_object
 
     def create_description(self):
@@ -242,7 +288,7 @@ class WidgetRepresentation(object):
 
     def edit_button(self, obj):
         button = widgets.ButtonWidget(description = self.edit_description(obj))
-        button.on_click(self.chenge_object_f(obj))
+        button.on_click(self.change_object_f(obj))
         return button
 
     def create_object(self):
@@ -252,7 +298,9 @@ class WidgetRepresentation(object):
         display(self.cont)
 
     def edit_object(self, obj):
-        default_values = obj.trait_values()
+        default_values = {name:getattr(obj, name) 
+                            for name in obj.trait_names()}
+                                
         self.cont, self.wdict = self.class_widget(default_values)
         button = self.edit_button(obj)
         self.cont.children = self.cont.children + (button,)
