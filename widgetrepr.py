@@ -54,6 +54,20 @@ class ListWidget(widgets.ContainerWidget):
         for child in wcont.children:
             child.set_css({'margin':'10px'})
     
+    def _edit_f_factory(self, elem):
+        def edit_f(button):
+            if self.add_representation:
+                wr =  self.add_representation(self.klass, 
+                      container_widget = widgets.PopupWidget, 
+                      )
+            else:
+                raise NotImplementedError() 
+            def edit_callback(obj):
+                wr.cont.close()
+            wr.edit_object(elem)
+            wr.edit_callback = edit_callback
+        return edit_f
+    
     
     def _value_changed(self, __ ,value):
         title = widgets.HTMLWidget(value ='<h5>%s</h5>' % self.description)
@@ -66,19 +80,9 @@ class ListWidget(widgets.ContainerWidget):
             delete_button = widgets.ButtonWidget(description = "Delete")
             wcont.children = [wtitle, edit_button, delete_button]
             
-            def edit_f(button):
-                if self.add_representation:
-                    wr =  self.add_representation(self.klass, 
-                          container_widget = widgets.PopupWidget, 
-                          )
-                else:
-                    raise NotImplementedError() 
-                def edit_callback(obj):
-                    wr.cont.close()
-                wr.edit_object(elem)
-                wr.edit_callback = edit_callback
+
             
-            edit_button.on_click(edit_f)
+            edit_button.on_click(self._edit_f_factory(elem))
             
             def delete_f(button):
                 l = list(self.value)
@@ -108,6 +112,8 @@ class ListWidget(widgets.ContainerWidget):
             else:
                 raise NotImplementedError() 
             wr.create_object()
+        
+        
         
             
              
