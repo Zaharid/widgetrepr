@@ -10,13 +10,11 @@ from collections import OrderedDict, defaultdict, Mapping
 from IPython.utils.traitlets import (
     Unicode,Bool,Int,Float, Enum, List, HasTraits, Instance
 )
-_e = False
-try:
-    from IPython.display import display
-    from IPython.html import widgets
-    from IPython.core.interactiveshell import InteractiveShell
-except ImportError as e:
-    _e = Exception("You need the module %s to produce widgets." % e.name)
+
+from IPython.display import display
+from IPython.html import widgets
+from IPython.core.interactiveshell import InteractiveShell
+
 
 from labcore.widgets.traits import ExecutableTrait
 
@@ -195,8 +193,6 @@ class WidgetRepresentation(object):
         return widget
 
     def class_widget(self, default_values = None):
-        if _e:
-            raise e
         if default_values is None:
             default_values = self.default_values
         cont = self.container()
@@ -315,8 +311,6 @@ class WidgetRepresentation(object):
 
 
 def create_object(varname, cls, default_values = None, **kwargs):
-    if _e:
-        raise _e
     if hasattr(cls, "WidgetRepresentation"):
         cm = cls.WidgetRepresentation(cls, varname, default_values, **kwargs)
     else:
@@ -324,8 +318,6 @@ def create_object(varname, cls, default_values = None, **kwargs):
     cm.create_object()
 
 def edit_object(obj, **kwargs):
-    if _e:
-        raise _e
     cls = obj.__class__
     if hasattr(cls, "WidgetRepresentation"):
         cm = cls.WidgetRepresentation(cls, **kwargs)
@@ -334,8 +326,6 @@ def edit_object(obj, **kwargs):
     cm.edit_object(obj)
 
 def class_widget(cls, default_values = None):
-    if _e:
-        raise _e
     if hasattr(cls, "WidgetRepresentation"):
         cm = cls.WidgetRepresentation(cls, default_values)
     else:
