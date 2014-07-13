@@ -4,6 +4,7 @@ Created on Fri May 16 18:57:47 2014
 
 @author: zah
 """
+from __future__ import absolute_import
 import inspect
 from collections import OrderedDict, defaultdict, Mapping
 #Delay errors so that this module can be imported without IPython.
@@ -16,7 +17,7 @@ from IPython.html import widgets
 from IPython.core.interactiveshell import InteractiveShell
 
 
-from labcore.widgets.traits import ExecutableTrait
+from .traits import ExecutableTrait
 
 
 class EvaluableWidget(widgets.TextWidget):
@@ -24,7 +25,8 @@ class EvaluableWidget(widgets.TextWidget):
     value = ExecutableTrait(help="Evaluable Python ", sync=True)
 
 class ListWidget(widgets.ContainerWidget):
-    description = Unicode(help="Description of the value this widget represents", sync=True)
+    description = Unicode(help="Description of the value this widget represents"
+                            ,sync=True)
 
     value = List(help = 'value')
     add_representation = None
